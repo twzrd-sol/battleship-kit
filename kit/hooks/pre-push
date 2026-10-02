@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Pre-push gate: run the local CI script on the commits being pushed and
+# record the verdict against the EXACT pushed SHA.
+#
+# Why record against the pushed SHA and not HEAD: `git push origin featureA`
+# while sitting on featureB would otherwise attach the verdict to the wrong
+# commit. git feeds this hook one line per ref on stdin; read it first, before
+# anything else consumes stdin.
+#
+# Why an override or a missing gate is recorded as a FAIL rather than nothing:
+# once, a branch pushed with the override was merged, and 162 files landed on
+# main without any gate having run on them. Nothing downstream could tell,
+# because "no record" looked the same as "not pushed yet". A missing gate must
+# leave a mark that says so. The hook is deliberately not allowed to declare "pass" on its
+# own; the verdict is derived from the gate's RESULT line by the recorder.
+#
+# Contract for the gate you bring (this kit ships none): ops/local-ci.sh prints one
+# line `RESULT: <passed> passed, <failed> failed, <skipped> skipped`. The verdict is
+# derived by ops/gate-record.sh (copy it from kit/ops/): pass only if failed==0 and
+# passed>0. No RESULT line, or a gate that ran nothing, is a refusal.
+#
+# Override (emergency only):  KIT_SKIP_LOCAL_CI=1 git push ...
+set -uo pipefail
+
+repo_toplevel="$(git rev-parse --show-toplevel 2>/dev/null || echo "")"
+gate="${KIT_GATE:-$repo_toplevel/ops/local-ci.sh}"
+record="${KIT_GATE_RECORD:-$repo_toplevel/ops/gate-record.sh}"
+
+pushed_shas=""; lines_seen=0
+while read -r _lref lsha _rref _rsha; do
+  lines_seen=$((lines_seen+1))
+  # an all-zero sha is a deletion: no code leaves this machine for that ref
+  if [ -n "${lsha:-}" ] && ! [[ "$lsha" =~ ^0+$ ]]; then
+    c="$(git rev-parse --verify -q "$lsha^{commit}" 2>/dev/null || echo "$lsha")"   # an annotated tag names a commit: gate the commit
+    pushed_shas="$pushed_shas $c"
+  fi
+done
+distinct="$(printf '%s' "$pushed_shas" | tr ' ' '\n' | grep -v '^$' | sort -u)"
+n_distinct="$(printf '%s' "$distinct" | grep -c . || true)"
+if [[ $lines_seen -gt 0 && $n_distinct -eq 0 ]]; then
+  exit 0   # a delete-only push: nothing to gate, nothing to record
+fi
+if [[ $n_distinct -gt 1 ]]; then
+  echo "pre-push: this push carries $n_distinct different commits and the gate can vouch for one at a time. Push one branch per command." >&2
+  exit 1
+fi
+head_sha="$distinct"
+[ -n "$head_sha" ] || head_sha="$(git rev-parse HEAD 2>/dev/null || echo "")"
+# A new branch or tag at a commit the remote already has sends no new code. There is nothing to gate
+# and nothing to record, so it must not need the emergency override. (A URL names no remote-tracking branch,
+# so nothing matches and the commit is gated as usual, as is any commit no remote-tracking branch reaches.)
+already_on_remote() {   # already_on_remote <remote> <commit>: true only when git SAYS the commit is reachable from that remote's branches
+  git rev-parse --verify -q "$2^{commit}" >/dev/null 2>&1 || return 1   # rev-list quietly accepts a blob or a tree and prints nothing
+  local new; new="$(git rev-list -n1 "$2" --not --remotes="$1" 2>/dev/null)" || return 1   # an object that is not a commit, or an unborn HEAD, is not "already there"
+  [[ -z "$new" ]]
+}
+if [[ -n "$head_sha" && -n "${1:-}" ]] && already_on_remote "$1" "$head_sha"; then
+  echo "pre-push: $head_sha is already on $1; nothing new to gate." >&2
+  exit 0
+fi
+
+note() { [[ -x "$record" && -n "$head_sha" ]] && "$record" "$head_sha" "$1" "${2:-}" >/dev/null 2>&1 || true; }
+verdict() {  # same rule as gate-record.sh, for a clone without it
+  local l="$1" p f; p="$(printf '%s' "$l" | sed -n 's/.*RESULT:[[:space:]]*\([0-9]\{1,\}\)[[:space:]]*passed.*/\1/p')"
+  f="$(printf '%s' "$l" | sed -n 's/.*passed,[[:space:]]*\([0-9]\{1,\}\)[[:space:]]*failed.*/\1/p')"
+  [[ -n "$p" && -n "$f" && "$f" -eq 0 && "$p" -gt 0 ]]
+}
+
+if [[ "${KIT_SKIP_LOCAL_CI:-0}" == "1" ]]; then
+  echo "pre-push: KIT_SKIP_LOCAL_CI=1, gate skipped. This commit is recorded as NOT gated." >&2
+  note none; exit 0
+fi
+if [[ ! -x "$gate" ]]; then
+  echo "pre-push: $gate not found or not executable. Gate SKIPPED (not run), recorded as not gated." >&2
+  note none; exit 0
+fi
+
+# The gate runs on the checked-out working tree. It can vouch for the commit being pushed
+# only when that commit IS the checked-out HEAD and tracked files have no uncommitted changes.
+cur_head="$(git rev-parse HEAD 2>/dev/null || echo "")"
+if [[ -n "$head_sha" && "$head_sha" != "$cur_head" ]]; then
+  echo "pre-push: the commit being pushed ($head_sha) is not the checked-out HEAD ($cur_head); the gate would test a different tree. Check it out or push HEAD, then retry. Recorded as not gated." >&2
+  note none; exit 1
+fi
+# explicit flags: status.showUntrackedFiles=no or status.ignoreSubmodules in a config must not switch the refusal off
+if [[ -n "$(git status --porcelain --untracked-files=normal --ignore-submodules=none 2>/dev/null)" ]]; then
+  echo "pre-push: the working tree is not clean (uncommitted changes or untracked files); the gate would test code that is not in $head_sha, or use a file the commit lacks. Commit, stash, ignore or remove them, then retry. Recorded as not gated." >&2
+  note none; exit 1
+fi
+out="$("$gate" 2>&1)"; rc=$?
+printf '%s\n' "$out"
+result_line="$(printf '%s\n' "$out" | grep -E '^RESULT:' | tail -1)"
+note filtered "$result_line"
+# Read the RESULT line as well as the exit code: absent tools SKIP rather than fail,
+# and a path-filtered gate is green on an unchanged tree. Green must mean "ran".
+if [[ $rc -ne 0 ]] || ! verdict "$result_line"; then
+  echo "pre-push: gate did not pass (${result_line:-no RESULT line}). Push refused." >&2
+  case "$result_line" in
+    *"RESULT: 0 passed, 0 failed"*) echo "pre-push: the gate ran no checks. A path-filtered gate runs nothing for a commit that changes no filtered path, such as an empty commit, and the contract above counts that as a refusal. Run your gate in its run-everything mode and push again, or use the emergency override, which records a FAIL against this commit." >&2 ;;
+  esac
+  exit 1
+fi
+exit 0

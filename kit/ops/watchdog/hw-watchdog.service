@@ -1,0 +1,22 @@
+# /etc/systemd/system/hw-watchdog.service   (systemctl enable hw-watchdog)
+# STATUS: the manual sequence (modprobe, daemon-reexec, verify timeleft) was
+# verified on the origin box; this unit has NOT yet been enabled and rebooted
+# anywhere. Treat it as a draft until you have.
+# Why a unit and not modules-load.d: Ubuntu blacklists watchdog modules in
+# /lib/modprobe.d and systemd-modules-load honors the blacklist, so a
+# modules-load.d entry logs "deny-listed (by kmod)" and loads nothing. A bare
+# modprobe from a unit ignores the blacklist.
+[Unit]
+Description=Load the hardware watchdog module before PID 1 looks for it
+DefaultDependencies=no
+Before=sysinit.target
+ConditionPathExists=!/dev/watchdog0
+
+[Service]
+Type=oneshot
+# Replace the placeholder with your board's module, for example iTCO_wdt (Intel chipsets) or sp5100_tco (many AMD ones).
+ExecStart=/sbin/modprobe <your-watchdog-module>
+RemainAfterExit=yes
+
+[Install]
+WantedBy=sysinit.target

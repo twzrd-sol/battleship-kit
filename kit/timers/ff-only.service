@@ -1,0 +1,9 @@
+[Unit]
+Description=Fast-forward the shared checkout to origin/main (ff-only; refuse if tracked files are dirty)
+After=network-online.target
+
+[Service]
+Type=oneshot
+Environment=KIT_FF_TREE=%h/app
+ExecStart=%h/.local/bin/ff-only.sh
+Nice=10

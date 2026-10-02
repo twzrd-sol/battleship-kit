@@ -1,0 +1,57 @@
+# Generic leak patterns. Safe to publish: shapes only, no names.
+# One pattern per line, grep -E, case-insensitive. A line starting with # is a comment,
+# so a pattern that must START with # is written [#]...
+# YOUR identifiers (private repo names, hostnames, buckets, people, vendors under
+# embargo) belong in a LOCAL list that never enters this repository. See scan.sh.
+
+# email addresses
+[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9.-]{1,253}\.[a-z]{2,}
+# UUIDs (session ids, request ids)
+[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}
+# base58 strings of 32-byte address length (Solana-style wallets)
+\b[1-9A-HJ-NP-Za-km-z]{32,44}\b
+# base58 strings of 64-byte secret-key length (a Solana keypair is 86 to 88 characters)
+\b[1-9A-HJ-NP-Za-km-z]{80,90}\b
+# 64 hexadecimal characters: a 32-byte key, or the hash of a secret
+\b[0-9a-f]{64}\b
+# a keypair written as a JSON array of 64 byte values
+(\b[0-9]{1,3}, ?){63}[0-9]{1,3}\b
+# EVM addresses
+0x[0-9a-fA-F]{40}
+# tailnet / carrier-grade NAT range 100.64.0.0/10
+\b100\.(6[4-9]|[7-9][0-9]|1[01][0-9]|12[0-7])\.[0-9]{1,3}\.[0-9]{1,3}\b
+# private IPv4 ranges
+\b10\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\b
+\b192\.168\.[0-9]{1,3}\.[0-9]{1,3}\b
+\b172\.(1[6-9]|2[0-9]|3[01])\.[0-9]{1,3}\.[0-9]{1,3}\b
+# absolute home-directory paths and agent scratch paths
+/home/[a-z_][a-z0-9_-]*
+/Users/[A-Za-z_]
+/root/[A-Za-z_.]
+/tmp/claude
+# internal ticket or PR numbers
+[#][0-9]{3,6}\b
+# credential shapes
+(AKIA|ASIA)[0-9A-Z]{16}
+(ghp|gho|ghu|ghs|ghr|github_pat)_[A-Za-z0-9_]{20,}
+\bsk-[A-Za-z0-9_-]{20,}
+\bnpm_[A-Za-z0-9]{30,}
+[sr]k_(live|test)_[A-Za-z0-9]{16,}
+\bwhsec_[A-Za-z0-9]{20,}
+\bglpat-[A-Za-z0-9_-]{20,}
+\bhf_[A-Za-z0-9]{30,}
+\bpypi-AgEI[A-Za-z0-9_-]{20,}
+\bya29\.[A-Za-z0-9_-]{20,}
+\bSG\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}
+\bdp\.(st|pt|ct|sa)\.[A-Za-z0-9]{10,}
+\bxox[abprs]-[A-Za-z0-9-]{10,}
+\bxapp-[A-Za-z0-9-]{10,}
+\bAIza[0-9A-Za-z_-]{35}
+\beyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.
+\beyJ[A-Za-z0-9+/=]{60,}
+hooks\.slack\.com/services/T[A-Z0-9]+/B[A-Z0-9]+/[A-Za-z0-9]+
+discord(app)?\.com/api/webhooks/[0-9]+/[A-Za-z0-9_-]+
+AGE-SECRET-KEY-1[A-Z0-9]{50,}
+# a password inside a URL or a database connection string
+://[^/@: ]*:[^/@ ]+@
+-----BEGIN [A-Z ]*PRIVATE KEY( BLOCK)?-----

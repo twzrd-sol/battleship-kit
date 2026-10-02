@@ -1,0 +1,12 @@
+[Unit]
+Description=Keep the shared checkout ff-only with origin/main
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=10min
+AccuracySec=1min
+Persistent=true
+Unit=ff-only.service
+
+[Install]
+WantedBy=timers.target

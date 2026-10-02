@@ -1,0 +1,6 @@
+# your real identifiers never enter this repository
+denylist.local*
+*.local.txt
+.planted*
+__pycache__/
+*.pyc
