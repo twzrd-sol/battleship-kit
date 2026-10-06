@@ -23,12 +23,22 @@ A reader treats a board older than `valid_for_seconds` as unknown, whatever its
 color says. After any reboot compare `generated_at` with the clock: a timer that
 elapsed during boot once left a board 28 hours stale while it still read green.
 
+A 200 from a health URL is only as good as the URL you configured. If
+`KIT_HEALTH_URLS` points at loopback Caddy, the board can stay green while the
+public hostname returns Cloudflare 502 from a second tunnel connector (see
+the top-level README and the 2026-10-05/06 receipt in `LESSONS.md`). Probe the
+**public** hostname with **curl**, not a Python client (Cloudflare 1010 is a
+browser check, not an origin failure). The board does not count tunnel
+connectors; a single `cloudflared` normally holds 4 edge connections, and 8 on
+one tunnel means two connectors. Add that check to the briefing.
+
 Rules:
 
 - No secrets, no secret-manager calls, no wallet material. If a database URL
   must be parsed, keep only the database name.
 - `gate_color` means *live health* (production is up), not "main is passing".
-  Two different questions; name them differently.
+  Two different questions; name them differently. Origin-up is also not
+  edge-up: say which URL you probed.
 - The board does not mutate anything except its own file.
 - Every number on the board is something a human could re-derive with one
   command; the board's source says which command.

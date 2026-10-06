@@ -7,8 +7,17 @@ lists standing hazards and the commands that verify them). The board carries its
 validity window: a board older than `valid_for_seconds` is unknown, whatever its color
 says. After any reboot compare `generated_at` with the clock before trusting it.
 
+Then prove the public path with curl, not a Python HTTP client (Cloudflare
+error 1010 is a browser integrity check, not an origin failure). If the public
+hostname is 502 and loopback Caddy is 200, the fault is the tunnel: count
+connectors (`cloudflared tunnel info <tunnel-uuid> --config /dev/null`). One
+connector is usually 4 edge connections; 8 means two. If static `/hub` is 200
+and `/hub/api` is not, the station moved, not the site.
+
 The shared checkout is fast-forward-only when clean; feature work happens in
-named worktrees only.
+named worktrees only. Do not prune worktrees by count: check each one for
+dirty files, open PRs, and running processes, and record recovery commits
+first.
 
 Runtime memories the agents keep for themselves are scratch, not canon. Canon
 lives in the repo, under version control, with an owner and a review date.

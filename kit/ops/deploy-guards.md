@@ -54,6 +54,12 @@ returns 502. The dry run prints the rename without checking the name. Fix in
 the script: check for the collision before the stop, or suffix the prev name
 with a timestamp. Recovery in the meantime: start the stopped container.
 
+A public 502 is not automatically this failure. On 2026-10-05/06,
+`radiolan.live/hub` returned Cloudflare `error code: 502` on about a third of
+requests while Caddy on the box logged only 200s: a second `cloudflared`
+connector (a forgotten Mac LaunchDaemon) had no origin. Prove origin vs edge
+before you restart a container. See the top-level README recovery table.
+
 ## Migration numbering
 
 Two agents will eventually give two migrations the same number. If the
