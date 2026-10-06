@@ -588,7 +588,7 @@ git -C "$t" config status.showUntrackedFiles no
 [ "$(pp 'echo "RESULT: 5 passed, 0 failed, 0 skipped"')" = 1 ] && ok "and the refusal holds when status.showUntrackedFiles=no tries to hide the file" || bad "showUntrackedFiles=no hid an untracked file"
 git -C "$t" config --unset status.showUntrackedFiles
 rm -f "$t/untracked.txt"
-git -C "$t" tag -a v1 -m rel; tagobj="$(git -C "$t" rev-parse v1)"
+git -C "$t" -c user.name=t -c user.email=t@t tag -a v1 -m rel; tagobj="$(git -C "$t" rev-parse v1)"
 printf '#!/bin/bash\necho "RESULT: 5 passed, 0 failed, 0 skipped"\n' > "$t/ops/local-ci.sh"
 ( cd "$t" && echo "refs/tags/v1 $tagobj refs/tags/v1 0000000000000000000000000000000000000000" | bash kit/hooks/pre-push >/dev/null 2>&1 ); [ $? -eq 0 ] && ok "an annotated tag is gated as the commit it names" || bad "annotated tag push"
 printf '#!/bin/bash\necho "RESULT: 0 passed, 3 failed, 0 skipped"; exit 1\n' > "$t/ops/local-ci.sh"   # from here the gate always fails, so any gating shows
