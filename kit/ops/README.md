@@ -14,3 +14,7 @@
 Every script here is exercised by `../../test.sh` without network, GitHub, or
 Docker: `gate-attest.sh` and `premerge-check.sh` against a fake `gh`,
 `status-board.py` against a fake `docker` and `curl`.
+
+The origin box (hosts, units, health, recovery) is documented in the
+top-level `README.md`. The briefing template is the shape of the file agents
+read first; fill it with live commands, not the template's placeholders.

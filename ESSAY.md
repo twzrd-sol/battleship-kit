@@ -145,6 +145,9 @@ unless its RESULT line shows jobs that ran and none that failed, the
 fast-forward-only timer, the pre-commit hook, and the leak gate. The `verify`
 role and the memory convention are habits I have not measured. Much of the rest
 of the kit is the receipt for a specific bruise.
-Read `LESSONS.md` for the bruises. Read `CLAIMS.md` before you quote a number
+Read `LESSONS.md` for the bruises, including the dated operator receipts from
+2026-10-05/06 (stray tunnel connector, station vs static path, store flush,
+test-runner glob, Cloudflare 1010, worktree sprawl). Read `CLAIMS.md` before you quote a number
 from this essay, including the revenue line, which I cannot tie to any
-independent customer.
+independent customer. The top-level README now names the hosts, services,
+health checks, and recovery steps for the origin box.

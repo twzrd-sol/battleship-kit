@@ -76,12 +76,17 @@ One evening per step. Each step stands alone; stop wherever you like.
 6. **Status board and briefing.** `install -Dm0755 kit/ops/status-board.py
    ~/.local/bin/status-board.py`, then run it once by hand with your `KIT_*`
    variables set (see `kit/ops/status-board.md`); it writes
-   `~/.config/kit/status.json`, or `KIT_STATUS_OUT`. Schedule it every five
+   `~/.config/kit/status.json`, or `KIT_STATUS_OUT`. Point `KIT_HEALTH_URLS` at
+   the **public** hostname, not only loopback Caddy: origin 200 is not edge
+   200. Probe with curl; a Python client can get Cloudflare 1010 and that is
+   not an origin failure. Schedule the board every five
    minutes with a user timer shaped like the fast-forward one (copy
    `kit/timers/ff-only.service` and `.timer`, change `Description`, `ExecStart`
    and `OnUnitActiveSec=5min`), and name its path in rule 03 so agents read it
    first. Then write the machine briefing from `kit/ops/briefing-template.md`:
-   hazards and verify commands only.
+   hazards and verify commands only, including tunnel connector count (one
+   connector is usually 4 edge connections; 8 means two) and which paths are
+   static files vs an API unit.
 
 7. **Watchdog, backup health, honesty marker.** Only if the box serves
    production. Read the three docs in `kit/ops/`; each one is a recipe plus the
