@@ -33,6 +33,7 @@ nr="$(printf '%s@%s' t users.noreply.github.com)"   # a GitHub noreply identity,
 idf="$(printf '%s-%s' acme internal-host)"          # the throwaway local-list identifier
 export KIT_EXPORT_NO_TEST=1   # the fixture repos below have no test.sh; one test turns this off
 unset KIT_EXPORT_MESSAGE KIT_EXPORT_TRAILER   # an exporter run with a trailer set runs this suite: its nested exports must not inherit the caller's
+unset KIT_REQUIRE_LOCAL KIT_ALLOW_GENERIC_ONLY KIT_ALLOW_BINARY   # the scanner's switches: inherited from a caller's shell they turn the generic-only and empty-list checks red (seen 2026-10-09)
 export KIT_GATE_STATE_DIR; KIT_GATE_STATE_DIR="$(mktemp -d)"; sha="$(git rev-parse HEAD 2>/dev/null || echo 0000000000000000000000000000000000000000)"
 mk() { local d; d="$(mktemp -d)"; git init -q -b main "$d"; cp scan.sh denylist.generic.txt "$d/"; git -C "$d" add -A; git -C "$d" -c user.name=t -c user.email="$nr" commit -q -m base; echo "$d"; }
 scanrc() { ( cd "$1" && ./scan.sh "${@:2}" >"$1/.scanout" 2>&1 ); echo $?; }
